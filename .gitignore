@@ -2,3 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# ignore log files
+*.log
+
+# ignore checkpoints
+*.tar
+
+# ignore the data directory for cifar 10
+data/
