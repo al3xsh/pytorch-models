@@ -1,22 +1,37 @@
 """
-pytorch_resnet_110.py
+resnet_original.py
 
+this uses pytorch to implement deep residual neural networks from:
+
+"Deep residual learning for image recognition" (He, et al., 2016)
+
+this version uses the original residual blocks (both bottleneck blocks and
+basic blocks)
+
+author:     alex shenfield
+date:       20/11/2017
 
 """
 
 import torch.nn as nn
 import math
 
+#
+# helper functions to simplify the creation of residual deep neural networks
+#
 
-
+# return a 3x3 convolution with implicit zero padding padding of 1 pixel on 
+# each side (this is the basic convolutional unit within the resnet 
+# architecture)
 def conv3x3(in_planes, out_planes, stride=1):
-    "3x3 convolution with padding"
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
     
-# original bottle neck block
+# original bottleneck residual block
 class OriginalBottleneckBlock(nn.Module):
-    expansion = 1
+    
+    # this controls the re-expansion of the bottleneck
+    expansion = 4
 
     # this is where all the layers are defined
     def __init__(self, inplanes, planes, stride=1, downsample=None):
@@ -27,14 +42,24 @@ class OriginalBottleneckBlock(nn.Module):
         
         # python 3 allows use of super like this ...
         super().__init__()
-        #super(BasicBlock, self).__init__() # python 2 version
         
         # define our layers
-        self.conv1 = conv3x3(inplanes, planes, stride)
+
+        # bottleneck constrict
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
+        
+        # relu activation function
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
+        
+        # 3x3 convolution
+        self.conv2 = conv3x3(planes, planes, stride=stride)
         self.bn2 = nn.BatchNorm2d(planes)
+
+        # bottleneck expand
+        self.conv3 = nn.Conv2d(planes, planes * self.expansion, kernel_size=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
+
         self.downsample = downsample
         self.stride = stride
 
@@ -51,6 +76,10 @@ class OriginalBottleneckBlock(nn.Module):
 
         out = self.conv2(out)
         out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
 
         # if we are down sampling in this block, we include the "downsample"
         # block in the shortcut path - this is the 1x1 convolution with stride
@@ -67,6 +96,8 @@ class OriginalBottleneckBlock(nn.Module):
 
 # basic original residual block
 class OriginalBasicBlock(nn.Module):
+    
+    # in the basic block, we don't need to reexpand the planes
     expansion = 1
 
     # this is where all the layers are defined
@@ -78,14 +109,15 @@ class OriginalBasicBlock(nn.Module):
         
         # python 3 allows use of super like this ...
         super().__init__()
-        #super(BasicBlock, self).__init__() # python 2 version
         
         # define our layers
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
+
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
+
         self.downsample = downsample
         self.stride = stride
 
@@ -117,12 +149,16 @@ class OriginalBasicBlock(nn.Module):
 
 
 
-class ResNetCifar10(nn.Module):
-
+class ResNet(nn.Module):
+        
+    # what this does is make sure we call all the methods in the right 
+    # order
+    # see https://stackoverflow.com/a/27134600
+      
+    # python 3 allows use of super like this ...
     def __init__(self, block, depth, num_classes=10):
                 
         super().__init__()
-        #super(ResNetCifar10, self).__init__()
         
         #Model type specifies number of layers for CIFAR-10 and CIFAR-100 model
         assert (depth - 2) % 6 == 0, 'depth should be one of 20, 32, 44, 56, 110'
