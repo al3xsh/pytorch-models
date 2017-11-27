@@ -20,8 +20,9 @@ import torch
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 
-# import my version of resnet-1001
+# import my version of resnet-1001 and resnet110
 from resnet.preactivation_resnet import resnet1001
+from resnet.preactivation_resnet import resnet110
 
 #
 # set up some functions to train for an epoch and then run on validation data
@@ -294,15 +295,32 @@ def main():
     
     # create model
     
-    # print progress
-    print("creating resnet 1001 model")
-       
-    # create the network and cuda it ...
-    net = resnet1001()
-    net.cuda()
+    # choose which model to use!
+    model = 'resnet 110'
     
-    # assign it to run on all available gpus
-    net = torch.nn.DataParallel(net)    
+    # create the appropriate model ...
+    if model == 'resnet 1001':
+    
+        # print progress
+        print("creating resnet 1001 model")
+           
+        # create the network and cuda it ...
+        net = resnet1001()
+        net.cuda()
+        
+        # assign it to run on all available gpus
+        net = torch.nn.DataParallel(net)    
+        
+    elif model == 'resnet 110':
+    
+        # print progress
+        print("creating resnet 110 model")
+           
+        # create the network and cuda it ...
+        net = resnet110()
+        net.cuda()
+    
+    # set up the optimisers, etc. for cifar 10
     
     # enable benchmarking in cudnn to allow autotuning of the algorithms 
     # (this can speed up the runtime - as long as the model inputs remain the
@@ -317,7 +335,7 @@ def main():
                                     nesterov=True)
     
     # train the network
-    print("training resnet 1001 model")
+    print("training resnet model")
     
     # train the network
     for epoch in range(max_epochs):
@@ -347,6 +365,7 @@ def main():
         
     # and that's all she wrote :)    
     print('finished training')
+    print('best result = {}'.format(best_accuracy))
     
 #
 # program entry point
